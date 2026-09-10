@@ -1,0 +1,43 @@
+CADERNO DE PAGAMENTOS COC — PUBLICAR NA CLOUDFLARE
+==================================================
+
+ANTES DE COMEÇAR
+
+1. Use um computador Windows conectado à internet.
+2. Não mova arquivos isoladamente: mantenha toda esta pasta junta.
+
+COMO PUBLICAR
+
+1. Clique duas vezes em PUBLICAR_NO_CLOUDFLARE.bat.
+2. Se o Node.js não estiver instalado, o instalador abrirá a página oficial.
+   Instale a versão LTS, reinicie o computador e execute novamente.
+3. O navegador abrirá a autorização da Cloudflare. Entre na conta correta e
+   autorize o Wrangler.
+4. Volte à janela preta e aguarde. Não feche durante a publicação.
+5. Ao final, copie o endereço terminado em workers.dev mostrado na tela.
+6. Abra o endereço e crie a senha administrativa no primeiro acesso.
+
+RECURSOS CRIADOS
+
+- Worker: caderno-pagamentos-coc-2026
+- Banco D1: caderno-pagamentos-coc-db
+
+PROTEÇÃO DOS OUTROS SITES
+
+O instalador não possui comandos para excluir Workers, bancos, domínios ou
+projetos. Ele não usa os nomes dos sites mostrados no seu painel. Se a conta
+gratuita já tiver atingido o limite de bancos D1, o instalador interromperá a
+publicação e mostrará a mensagem sem alterar os projetos existentes.
+
+ATUALIZAÇÕES FUTURAS
+
+Guarde esta pasta. Para publicar uma atualização, execute novamente
+PUBLICAR_NO_CLOUDFLARE.bat. O banco do Caderno será reutilizado e os pagamentos
+já cadastrados serão preservados.
+
+IMPORTANTE
+
+- Nunca envie sua senha, token ou código de autorização da Cloudflare.
+- Não coloque esta pasta em um repositório público: ela contém a base inicial
+  com nomes e telefones dos alunos.
+- O domínio próprio pode ser conectado depois da primeira publicação.
