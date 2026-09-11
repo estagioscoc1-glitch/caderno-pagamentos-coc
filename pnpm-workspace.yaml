@@ -3,12 +3,14 @@ minimumReleaseAge: 10080
 minimumReleaseAgeIgnoreMissingTime: false
 trustLockfile: false
 strictDepBuilds: true
-allowBuilds:
-  esbuild: true
-  fsevents: true
-  sharp: true
-  unrs-resolver: true
-  workerd: true
+# pnpm 10 uses an explicit allowlist for packages whose installation scripts
+# are required to provide the native build binaries used by Vinext/Cloudflare.
+onlyBuiltDependencies:
+  - esbuild
+  - fsevents
+  - sharp
+  - unrs-resolver
+  - workerd
 storeDir: ${SITES_PNPM_SHARED_STORE:-.sites-runtime/pnpm-store}
 cacheDir: ${SITES_PNPM_SHARED_STORE:-.sites-runtime/pnpm-store}/policy-cache
 enableGlobalVirtualStore: false
