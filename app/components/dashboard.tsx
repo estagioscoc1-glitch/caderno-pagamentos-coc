@@ -3,7 +3,7 @@
 import { CheckCircle2, ChevronRight, Clock3, TrendingUp, UserMinus, Users } from "lucide-react";
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Progress } from "@/components/ui/progress";
-import { type BookState, type PaymentColumn } from "@/app/lib/seed-data";
+import { type ManagedBookState as BookState, type PaymentColumn } from "@/app/lib/semester";
 import { classList, number } from "./shared";
 
 function StatCard({ label, value, detail, tone, icon }: { label: string; value: string | number; detail: string; tone: string; icon: React.ReactNode }) {
