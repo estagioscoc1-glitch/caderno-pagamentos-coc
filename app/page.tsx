@@ -1,110 +1,58 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import { BookOpenCheck, ChevronRight, FileDown, LayoutDashboard, LogOut, Menu, MessageCircle, RefreshCw, ShieldCheck, UserMinus, X } from "lucide-react";
+import { useCallback,useEffect,useRef,useState } from "react";
+import { BookOpenCheck,ChevronRight,FileDown,LayoutDashboard,LogOut,Menu,MessageCircle,Plus,RefreshCw,ShieldCheck,UserMinus,X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { AuthScreen, classList, Logo } from "@/app/components/shared";
+import { Dialog,DialogContent,DialogDescription,DialogFooter,DialogHeader,DialogTitle } from "@/components/ui/dialog";
+import { AuthScreen,classList,Logo } from "@/app/components/shared";
 import { Dashboard } from "@/app/components/dashboard";
 import { Notebook } from "@/app/components/notebook";
-import { Reports, Withdrawn } from "@/app/components/reports";
+import { Reports,Withdrawn } from "@/app/components/reports";
 import { WhatsAppCenter } from "@/app/components/whatsapp";
 import { Security } from "@/app/components/security";
-import { CLASS_ORDER, type BookState, type MessageLog, type PaymentColumnId, type PaymentStatus, type Student } from "@/app/lib/seed-data";
+import { CLASS_ORDER,type MessageLog,type PaymentStatus } from "@/app/lib/seed-data";
+import { normalizeBookState,semesterColumns,type ManagedBookState as BookState,type ManagedStudent as Student,type PaymentColumnId,type Semester } from "@/app/lib/semester";
 
-type View = "dashboard" | "notebook" | "reports" | "whatsapp" | "withdrawn" | "security";
-type AuthState = "loading" | "setup" | "login" | "authenticated";
-type SaveState = "saved" | "saving" | "error";
+type View="dashboard"|"notebook"|"reports"|"whatsapp"|"withdrawn"|"security";
+type AuthState="loading"|"setup"|"login"|"authenticated"; type SaveState="saved"|"saving"|"error";
+const emptyStudent={registration:"",name:"",cpf:"",phone:"",className:"",course:"",module:"",shift:""};
 
-export default function Home() {
-  const [auth, setAuth] = useState<AuthState>("loading");
-  const [state, setState] = useState<BookState | null>(null);
-  const [view, setView] = useState<View>("dashboard");
-  const [selectedClass, setSelectedClass] = useState<string>(CLASS_ORDER[0]);
-  const [saveState, setSaveState] = useState<SaveState>("saved");
-  const [mobileMenu, setMobileMenu] = useState(false);
-  const [confirmStudent, setConfirmStudent] = useState<Student | null>(null);
-  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const loadState = useCallback(async () => {
-    const response = await fetch("/api/state", { cache: "no-store" });
-    if (response.status === 401) return setAuth("login");
-    if (!response.ok) throw new Error("Não foi possível carregar o caderno.");
-    const result = (await response.json()) as BookState;
-    setState(result); setAuth("authenticated");
-    setSelectedClass((current) => result.students.some((student) => student.className === current) ? current : (classList(result.students)[0] ?? ""));
-  }, []);
-
-  useEffect(() => {
-    fetch("/api/auth", { cache: "no-store" }).then(async (response) => {
-      const result = (await response.json()) as { configured: boolean; authenticated: boolean };
-      if (!result.configured) setAuth("setup");
-      else if (!result.authenticated) setAuth("login");
-      else await loadState();
-    }).catch(() => setAuth("login"));
-  }, [loadState]);
-
-  async function persist(next: BookState) {
-    setSaveState("saving");
-    try {
-      const response = await fetch("/api/state", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(next) });
-      if (response.status === 401) { setAuth("login"); return; }
-      if (!response.ok) throw new Error();
-      const saved = (await response.json()) as BookState;
-      setState((current) => current ? { ...current, updatedAt: saved.updatedAt } : current);
-      setSaveState("saved");
-    } catch { setSaveState("error"); }
-  }
-
-  function update(mutator: (current: BookState) => BookState) {
-    if (!state) return;
-    const next = { ...mutator(state), updatedAt: new Date().toISOString() };
-    setState(next); setSaveState("saving");
-    if (saveTimer.current) clearTimeout(saveTimer.current);
-    saveTimer.current = setTimeout(() => void persist(next), 450);
-  }
-
-  function payment(studentId: string, column: PaymentColumnId, status: PaymentStatus) {
-    update((current) => ({ ...current, students: current.students.map((student) => student.id === studentId ? { ...student, payments: { ...student.payments, [column]: status } } : student) }));
-  }
-
-  function confirmSituation() {
-    if (!confirmStudent) return;
-    const nextSituation = confirmStudent.situation === "withdrawn" ? "active" : "withdrawn";
-    update((current) => ({ ...current, students: current.students.map((student) => student.id === confirmStudent.id ? { ...student, situation: nextSituation, situationChangedAt: new Date().toISOString() } : student) }));
-    setConfirmStudent(null);
-  }
-
-  async function logout() {
-    await fetch("/api/auth", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "logout" }) });
-    setState(null); setAuth("login");
-  }
-
-  if (auth === "loading") return <main className="loading-screen"><div className="loading-logo">COC</div><RefreshCw className="spin" /><span>Preparando seu caderno...</span></main>;
-  if (auth === "setup" || auth === "login") return <AuthScreen mode={auth} onAuthenticated={() => void loadState()} />;
-  if (!state) return <main className="loading-screen"><RefreshCw className="spin" /></main>;
-
-  const nav = [
-    { id: "dashboard" as View, label: "Dashboard", icon: <LayoutDashboard /> },
-    { id: "notebook" as View, label: "Caderno por sala", icon: <BookOpenCheck /> },
-    { id: "reports" as View, label: "Relatórios", icon: <FileDown /> },
-    { id: "whatsapp" as View, label: "WhatsApp", icon: <MessageCircle /> },
-    { id: "withdrawn" as View, label: "Desistentes", icon: <UserMinus /> },
-    { id: "security" as View, label: "Segurança", icon: <ShieldCheck /> },
-  ];
-  const title = nav.find((item) => item.id === view)?.label;
-
-  return <div className="app-shell">
-    <aside className={`sidebar ${mobileMenu ? "mobile-open" : ""}`}><div className="sidebar-top"><Logo /><button className="mobile-close" onClick={() => setMobileMenu(false)}><X /></button></div><div className="sidebar-section-label">NAVEGAÇÃO</div><nav>{nav.map((item) => <button key={item.id} className={view === item.id ? "active" : ""} onClick={() => { setView(item.id); setMobileMenu(false); }}>{item.icon}<span>{item.label}</span>{view === item.id && <i />}</button>)}</nav><div className="sidebar-semester"><div><BookOpenCheck /></div><span>Período letivo</span><strong>2026/2</strong><small>Setembro a fevereiro</small></div><button className="logout-button" onClick={() => void logout()}><LogOut /><span>Sair do sistema</span></button></aside>
-    {mobileMenu && <button className="mobile-overlay" onClick={() => setMobileMenu(false)} aria-label="Fechar menu" />}
-    <main className="main-area"><header className="topbar"><button className="menu-button" onClick={() => setMobileMenu(true)}><Menu /></button><div><span className="breadcrumb">Caderno COC <ChevronRight size={13} /> {title}</span><strong>{title}</strong></div><div className={`save-indicator ${saveState}`}><i />{saveState === "saving" ? "Salvando..." : saveState === "error" ? "Erro ao salvar" : "Tudo salvo"}</div></header><div className="content-area">
-      {view === "dashboard" && <Dashboard state={state} onOpenClass={(name) => { setSelectedClass(name); setView("notebook"); }} />}
-      {view === "notebook" && <Notebook state={state} selectedClass={selectedClass} onClassChange={setSelectedClass} onPayment={payment} onSituation={setConfirmStudent} />}
-      {view === "reports" && <Reports state={state} />}
-      {view === "whatsapp" && <WhatsAppCenter state={state} onTemplate={(messageTemplate) => update((current) => ({ ...current, messageTemplate }))} onLog={(log: MessageLog) => update((current) => ({ ...current, messageHistory: [...current.messageHistory, log] }))} />}
-      {view === "withdrawn" && <Withdrawn state={state} onSituation={setConfirmStudent} />}
-      {view === "security" && <Security onPasswordChanged={() => { setState(null); setAuth("login"); }} />}
-    </div></main>
-    <Dialog open={Boolean(confirmStudent)} onOpenChange={(open) => !open && setConfirmStudent(null)}><DialogContent><DialogHeader><DialogTitle>{confirmStudent?.situation === "withdrawn" ? "Reativar aluno?" : "Marcar como desistente?"}</DialogTitle><DialogDescription>{confirmStudent?.situation === "withdrawn" ? `${confirmStudent?.name} voltará aos indicadores e ao caderno de pagamentos.` : `${confirmStudent?.name} sairá dos cálculos de pagamento e inadimplência. O histórico será preservado.`}</DialogDescription></DialogHeader><DialogFooter><Button variant="outline" onClick={() => setConfirmStudent(null)}>Cancelar</Button><Button variant={confirmStudent?.situation === "withdrawn" ? "default" : "destructive"} onClick={confirmSituation}>{confirmStudent?.situation === "withdrawn" ? "Reativar aluno" : "Confirmar desistência"}</Button></DialogFooter></DialogContent></Dialog>
-  </div>;
+export default function Home(){
+ const [auth,setAuth]=useState<AuthState>("loading"),[state,setState]=useState<BookState|null>(null),[view,setView]=useState<View>("dashboard");
+ const [selectedClass,setSelectedClass]=useState(CLASS_ORDER[0] as string),[saveState,setSaveState]=useState<SaveState>("saved"),[mobileMenu,setMobileMenu]=useState(false);
+ const [confirmStudent,setConfirmStudent]=useState<Student|null>(null),[semesterOpen,setSemesterOpen]=useState(false),[studentOpen,setStudentOpen]=useState(false),[importOpen,setImportOpen]=useState(false);
+ const [semesterLabel,setSemesterLabel]=useState("2027/1"),[copyStudents,setCopyStudents]=useState(true),[studentForm,setStudentForm]=useState(emptyStudent),[formError,setFormError]=useState("");
+ const saveTimer=useRef<ReturnType<typeof setTimeout>|null>(null);
+ const loadState=useCallback(async()=>{const response=await fetch("/api/state",{cache:"no-store"});if(response.status===401)return setAuth("login");if(!response.ok)throw new Error("Não foi possível carregar o caderno.");const result=normalizeBookState(await response.json() as BookState);setState(result);setAuth("authenticated");const students=result.students.filter(s=>s.semesterId===result.activeSemesterId);setSelectedClass(current=>students.some(s=>s.className===current)?current:(classList(students)[0]??""));},[]);
+ useEffect(()=>{fetch("/api/auth",{cache:"no-store"}).then(async r=>{const x=await r.json() as {configured:boolean;authenticated:boolean};if(!x.configured)setAuth("setup");else if(!x.authenticated)setAuth("login");else await loadState();}).catch(()=>setAuth("login"));},[loadState]);
+ async function persist(next:BookState){setSaveState("saving");try{const r=await fetch("/api/state",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(next)});if(r.status===401){setAuth("login");return;}if(!r.ok)throw new Error();const saved=await r.json() as BookState;setState(current=>current?{...current,updatedAt:saved.updatedAt}:current);setSaveState("saved");}catch{setSaveState("error");}}
+ function update(mutator:(current:BookState)=>BookState){if(!state)return;const next={...mutator(state),updatedAt:new Date().toISOString()};setState(next);setSaveState("saving");if(saveTimer.current)clearTimeout(saveTimer.current);saveTimer.current=setTimeout(()=>void persist(next),450);}
+ if(auth==="loading")return <main className="loading-screen"><div className="loading-logo">COC</div><RefreshCw className="spin"/><span>Preparando seu caderno...</span></main>;
+ if(auth==="setup"||auth==="login")return <AuthScreen mode={auth} onAuthenticated={()=>void loadState()}/>;
+ if(!state)return <main className="loading-screen"><RefreshCw className="spin"/></main>;
+ const semesters=state.semesters??[],activeSemester=semesters.find(s=>s.id===state.activeSemesterId)??semesters[0];
+ const semesterStudents=state.students.filter(s=>(s.semesterId??"2026-2")===activeSemester.id),activeState={...state,students:semesterStudents};
+ const columns=activeSemester.paymentColumns;
+ function payment(studentId:string,column:PaymentColumnId,status:PaymentStatus){update(c=>({...c,students:c.students.map(s=>s.id===studentId?{...s,payments:{...s.payments,[column]:status}}:s)}));}
+ function confirmSituation(){if(!confirmStudent)return;const situation=confirmStudent.situation==="withdrawn"?"active":"withdrawn";update(c=>({...c,students:c.students.map(s=>s.id===confirmStudent.id?{...s,situation,situationChangedAt:new Date().toISOString()}:s)}));setConfirmStudent(null);}
+ function chooseSemester(id:string){update(c=>({...c,activeSemesterId:id}));const list=state!.students.filter(s=>(s.semesterId??"2026-2")===id);setSelectedClass(classList(list)[0]??"");}
+ function createSemester(){setFormError("");try{const label=semesterLabel.trim(),id=label.replace("/","-");if(semesters.some(s=>s.id===id))return setFormError("Esse semestre já existe.");const paymentColumns=semesterColumns(label),semester:Semester={id,label,startMonth:paymentColumns[0].id,endMonth:paymentColumns[5].id,paymentColumns,createdAt:new Date().toISOString()};const copies:Student[]=copyStudents?semesterStudents.filter(s=>s.situation==="active").map(s=>({...s,id:`${id}-${s.registration}-${crypto.randomUUID().slice(0,8)}`,semesterId:id,situation:"active" as const,situationChangedAt:null,payments:Object.fromEntries(paymentColumns.map(c=>[c.id,"pending" as const]))})):[];update(c=>({...c,semesters:[...(c.semesters??[]),semester],activeSemesterId:id,students:[...c.students,...copies]}));setSelectedClass(classList(copies)[0]??"");setSemesterOpen(false);}catch(e){setFormError(e instanceof Error?e.message:"Semestre inválido.");}}
+ function addStudent(){setFormError("");const f=studentForm;if(!f.registration.trim()||!f.name.trim()||!f.className.trim())return setFormError("Preencha matrícula, nome e turma.");if(semesterStudents.some(s=>s.registration===f.registration.trim()))return setFormError("Essa matrícula já existe neste semestre.");const payments=Object.fromEntries(columns.map(c=>[c.id,"pending" as const]));const student:Student={id:`${activeSemester.id}-${f.registration.trim()}-${crypto.randomUUID().slice(0,8)}`,semesterId:activeSemester.id,registration:f.registration.trim(),name:f.name.trim().toUpperCase(),cpf:f.cpf.trim(),phone:f.phone.trim(),className:f.className.trim().toUpperCase(),course:f.course.trim(),module:f.module.trim(),shift:f.shift.trim().toUpperCase(),situation:"active",situationChangedAt:null,payments};update(c=>({...c,students:[...c.students,student]}));setSelectedClass(student.className);setStudentForm(emptyStudent);setStudentOpen(false);}
+ function csvLine(line:string,delimiter:string){const out:string[]=[],rx=new RegExp(`(?:^|${delimiter})(?:\"([^\"]*(?:\"\"[^\"]*)*)\"|([^${delimiter}]*))`,"g");let m;while((m=rx.exec(line)))out.push((m[1]??m[2]??"").replaceAll('""','"').trim());return out;}
+ async function importCsv(file:File){setFormError("");try{const text=await file.text(),lines=text.replace(/^\uFEFF/,"").split(/\r?\n/).filter(Boolean),delimiter=lines[0].includes(";")?";":",",headers=csvLine(lines[0],delimiter).map(x=>x.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,""));const key=(...names:string[])=>names.map(n=>headers.indexOf(n)).find(i=>i>=0)??-1;const indexes={registration:key("matricula","registro"),name:key("nome","aluno"),cpf:key("cpf"),phone:key("telefone","celular"),className:key("turma","sala"),course:key("curso"),module:key("modulo"),shift:key("turno")};if(indexes.registration<0||indexes.name<0||indexes.className<0)throw new Error("O CSV precisa ter as colunas Matrícula, Nome e Turma.");const existing=new Set(semesterStudents.map(s=>s.registration)),added:Student[]=[];for(const line of lines.slice(1)){const v=csvLine(line,delimiter),registration=v[indexes.registration]?.trim();if(!registration||existing.has(registration))continue;existing.add(registration);added.push({id:`${activeSemester.id}-${registration}-${crypto.randomUUID().slice(0,8)}`,semesterId:activeSemester.id,registration,name:(v[indexes.name]??"").trim().toUpperCase(),cpf:indexes.cpf>=0?v[indexes.cpf]:"",phone:indexes.phone>=0?v[indexes.phone]:"",className:(v[indexes.className]??"").trim().toUpperCase(),course:indexes.course>=0?v[indexes.course]:"",module:indexes.module>=0?v[indexes.module]:"",shift:indexes.shift>=0?v[indexes.shift].toUpperCase():"",situation:"active",situationChangedAt:null,payments:Object.fromEntries(columns.map(c=>[c.id,"pending"]))});}if(!added.length)throw new Error("Nenhum aluno novo foi encontrado no arquivo.");update(c=>({...c,students:[...c.students,...added]}));setSelectedClass(added[0].className);setImportOpen(false);}catch(e){setFormError(e instanceof Error?e.message:"Não foi possível importar o arquivo.");}}
+ async function logout(){await fetch("/api/auth",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"logout"})});setState(null);setAuth("login");}
+ const nav=[{id:"dashboard" as View,label:"Dashboard",icon:<LayoutDashboard/>},{id:"notebook" as View,label:"Caderno por sala",icon:<BookOpenCheck/>},{id:"reports" as View,label:"Relatórios",icon:<FileDown/>},{id:"whatsapp" as View,label:"WhatsApp",icon:<MessageCircle/>},{id:"withdrawn" as View,label:"Inativos",icon:<UserMinus/>},{id:"security" as View,label:"Segurança",icon:<ShieldCheck/>}],title=nav.find(x=>x.id===view)?.label;
+ return <div className="app-shell">
+  <aside className={`sidebar ${mobileMenu?"mobile-open":""}`}><div className="sidebar-top"><Logo/><button className="mobile-close" onClick={()=>setMobileMenu(false)}><X/></button></div><div className="sidebar-section-label">NAVEGAÇÃO</div><nav>{nav.map(x=><button key={x.id} className={view===x.id?"active":""} onClick={()=>{setView(x.id);setMobileMenu(false);}}>{x.icon}<span>{x.label}</span>{view===x.id&&<i/>}</button>)}</nav><div className="sidebar-semester"><div><BookOpenCheck/></div><span>Período letivo</span><select value={activeSemester.id} onChange={e=>chooseSemester(e.target.value)}>{semesters.map(s=><option key={s.id} value={s.id}>{s.label}</option>)}</select><small>{activeSemester.paymentColumns.slice(0,6).map(x=>x.shortLabel).join(" · ")}</small><button onClick={()=>{setFormError("");setSemesterOpen(true);}}><Plus size={13}/> Novo semestre</button></div><button className="logout-button" onClick={()=>void logout()}><LogOut/><span>Sair do sistema</span></button></aside>
+  {mobileMenu&&<button className="mobile-overlay" onClick={()=>setMobileMenu(false)} aria-label="Fechar menu"/>}
+  <main className="main-area"><header className="topbar"><button className="menu-button" onClick={()=>setMobileMenu(true)}><Menu/></button><div><span className="breadcrumb">Caderno COC <ChevronRight size={13}/> {activeSemester.label} <ChevronRight size={13}/> {title}</span><strong>{title}</strong></div><div className={`save-indicator ${saveState}`}><i/>{saveState==="saving"?"Salvando...":saveState==="error"?"Erro ao salvar":"Tudo salvo"}</div></header><div className="content-area">
+   {view==="dashboard"&&<Dashboard state={activeState} columns={columns} semesterLabel={activeSemester.label} onOpenClass={name=>{setSelectedClass(name);setView("notebook");}}/>}
+   {view==="notebook"&&<Notebook state={activeState} columns={columns} selectedClass={selectedClass} onClassChange={setSelectedClass} onPayment={payment} onSituation={setConfirmStudent} onAddStudent={()=>{setFormError("");setStudentForm({...emptyStudent,className:selectedClass});setStudentOpen(true);}} onImport={()=>{setFormError("");setImportOpen(true);}}/>}
+   {view==="reports"&&<Reports state={activeState} columns={columns}/>} {view==="whatsapp"&&<WhatsAppCenter state={activeState as never} onTemplate={messageTemplate=>update(c=>({...c,messageTemplate}))} onLog={(log:MessageLog)=>update(c=>({...c,messageHistory:[...c.messageHistory,log]}))}/>} {view==="withdrawn"&&<Withdrawn state={activeState} onSituation={setConfirmStudent}/>} {view==="security"&&<Security onPasswordChanged={()=>{setState(null);setAuth("login");}}/>}
+  </div></main>
+  <Dialog open={Boolean(confirmStudent)} onOpenChange={o=>!o&&setConfirmStudent(null)}><DialogContent><DialogHeader><DialogTitle>{confirmStudent?.situation==="withdrawn"?"Restaurar aluno?":"Mover aluno para inativos?"}</DialogTitle><DialogDescription>{confirmStudent?.situation==="withdrawn"?`${confirmStudent?.name} voltará à turma e aos indicadores.`:`${confirmStudent?.name} sairá da turma ativa. CPF, pagamentos e histórico serão preservados.`}</DialogDescription></DialogHeader><DialogFooter><Button variant="outline" onClick={()=>setConfirmStudent(null)}>Cancelar</Button><Button variant={confirmStudent?.situation==="withdrawn"?"default":"destructive"} onClick={confirmSituation}>{confirmStudent?.situation==="withdrawn"?"Restaurar":"Mover para inativos"}</Button></DialogFooter></DialogContent></Dialog>
+  <Dialog open={semesterOpen} onOpenChange={setSemesterOpen}><DialogContent><DialogHeader><DialogTitle>Criar novo semestre</DialogTitle><DialogDescription>Use 2027/1 para março a agosto ou 2027/2 para setembro a fevereiro.</DialogDescription></DialogHeader><div className="form-grid"><label><span>Semestre</span><input value={semesterLabel} onChange={e=>setSemesterLabel(e.target.value)} placeholder="2027/1"/></label><label className="check-row"><input type="checkbox" checked={copyStudents} onChange={e=>setCopyStudents(e.target.checked)}/><span>Copiar os alunos ativos de {activeSemester.label} com as novas parcelas pendentes</span></label>{formError&&<p className="form-error">{formError}</p>}</div><DialogFooter><Button variant="outline" onClick={()=>setSemesterOpen(false)}>Cancelar</Button><Button onClick={createSemester}>Criar semestre</Button></DialogFooter></DialogContent></Dialog>
+  <Dialog open={studentOpen} onOpenChange={setStudentOpen}><DialogContent><DialogHeader><DialogTitle>Novo aluno em {activeSemester.label}</DialogTitle><DialogDescription>O aluno será incluído com todas as parcelas do semestre como pendentes.</DialogDescription></DialogHeader><div className="form-grid two-cols">{([['registration','Matrícula'],['name','Nome completo'],['cpf','CPF'],['phone','Telefone'],['className','Turma'],['course','Curso'],['module','Módulo'],['shift','Turno']] as const).map(([k,l])=><label key={k}><span>{l}</span><input value={studentForm[k]} onChange={e=>setStudentForm(f=>({...f,[k]:e.target.value}))}/></label>)}{formError&&<p className="form-error">{formError}</p>}</div><DialogFooter><Button variant="outline" onClick={()=>setStudentOpen(false)}>Cancelar</Button><Button onClick={addStudent}>Incluir aluno</Button></DialogFooter></DialogContent></Dialog>
+  <Dialog open={importOpen} onOpenChange={setImportOpen}><DialogContent><DialogHeader><DialogTitle>Importar alunos por CSV</DialogTitle><DialogDescription>Colunas obrigatórias: Matrícula, Nome e Turma. Opcionais: CPF, Telefone, Curso, Módulo e Turno. Matrículas repetidas serão ignoradas.</DialogDescription></DialogHeader><div className="form-grid"><input type="file" accept=".csv,text/csv" onChange={e=>e.target.files?.[0]&&void importCsv(e.target.files[0])}/>{formError&&<p className="form-error">{formError}</p>}</div><DialogFooter><Button variant="outline" onClick={()=>setImportOpen(false)}>Fechar</Button></DialogFooter></DialogContent></Dialog>
+ </div>;
 }
