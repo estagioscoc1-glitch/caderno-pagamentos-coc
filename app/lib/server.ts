@@ -199,10 +199,51 @@ export async function getBookState(): Promise<BookState> {
 }
 
 export async function saveBookState(state: BookState): Promise<BookState> {
+  const db = getDatabase();
+  const current = await db.prepare("SELECT state_json AS stateJson, updated_at AS updatedAt FROM payment_book_state WHERE id = 1").first<{ stateJson: string; updatedAt: string }>();
+  if (current) await createBookSnapshot(db, current.stateJson, current.updatedAt, false);
   const next = { ...state, updatedAt: new Date().toISOString() } satisfies BookState;
-  await getDatabase()
+  await db
     .prepare("INSERT OR REPLACE INTO payment_book_state (id, state_json, updated_at) VALUES (1, ?, ?)")
     .bind(JSON.stringify(next), next.updatedAt)
     .run();
   return next;
+}
+
+async function createBookSnapshot(db: D1Database, stateJson: string, sourceUpdatedAt: string, force: boolean): Promise<void> {
+  const today = new Date().toISOString().slice(0, 10);
+  if (!force) {
+    const exists = await db.prepare("SELECT id FROM payment_book_state WHERE id > 1 AND updated_at LIKE ? LIMIT 1").bind(`${today}%`).first();
+    if (exists) return;
+  }
+  const nextId = await db.prepare("SELECT COALESCE(MAX(id), 1) + 1 AS id FROM payment_book_state").first<{ id: number }>();
+  const createdAt = new Date().toISOString();
+  await db.prepare("INSERT INTO payment_book_state (id, state_json, updated_at) VALUES (?, ?, ?)").bind(nextId?.id ?? 2, JSON.stringify({ state: JSON.parse(stateJson), sourceUpdatedAt, createdAt }), createdAt).run();
+  await db.prepare("DELETE FROM payment_book_state WHERE id > 1 AND id NOT IN (SELECT id FROM payment_book_state WHERE id > 1 ORDER BY updated_at DESC LIMIT 30)").run();
+}
+
+export async function createManualBackup(): Promise<void> {
+  const db = getDatabase();
+  const current = await db.prepare("SELECT state_json AS stateJson, updated_at AS updatedAt FROM payment_book_state WHERE id = 1").first<{ stateJson: string; updatedAt: string }>();
+  if (current) await createBookSnapshot(db, current.stateJson, current.updatedAt, true);
+}
+
+export async function listBookBackups(): Promise<Array<{ id: number; createdAt: string; sourceUpdatedAt: string }>> {
+  const rows = await getDatabase().prepare("SELECT id, state_json AS stateJson, updated_at AS createdAt FROM payment_book_state WHERE id > 1 ORDER BY updated_at DESC LIMIT 30").all<{ id: number; stateJson: string; createdAt: string }>();
+  return (rows.results ?? []).map((row) => { try { const data = JSON.parse(row.stateJson) as { sourceUpdatedAt?: string }; return { id: row.id, createdAt: row.createdAt, sourceUpdatedAt: data.sourceUpdatedAt ?? row.createdAt }; } catch { return { id: row.id, createdAt: row.createdAt, sourceUpdatedAt: row.createdAt }; } });
+}
+
+export async function restoreBookBackup(id: number): Promise<BookState> {
+  const db = getDatabase();
+  const backup = await db.prepare("SELECT state_json AS stateJson FROM payment_book_state WHERE id = ? AND id > 1").bind(id).first<{ stateJson: string }>();
+  if (!backup) throw new Error("Backup não encontrado.");
+  const current = await db.prepare("SELECT state_json AS stateJson, updated_at AS updatedAt FROM payment_book_state WHERE id = 1").first<{ stateJson: string; updatedAt: string }>();
+  if (current) await createBookSnapshot(db, current.stateJson, current.updatedAt, true);
+  const envelope = JSON.parse(backup.stateJson) as { state?: BookState };
+  const restored = normalizeBookState(envelope.state ?? envelope as unknown as BookState);
+  return saveBookState(restored);
+}
+
+export async function databaseIsHealthy(): Promise<boolean> {
+  try { await getDatabase().prepare("SELECT id FROM payment_book_state LIMIT 1").first(); return true; } catch { return false; }
 }
