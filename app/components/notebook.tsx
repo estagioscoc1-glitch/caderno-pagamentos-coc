@@ -2,7 +2,8 @@
 
 import { GraduationCap, Search, UserPlus, Upload } from "lucide-react";
 import { useState } from "react";
-import { type BookState, type PaymentColumn, type PaymentColumnId, type PaymentStatus, type Student } from "@/app/lib/seed-data";
+import { type PaymentStatus, type Student } from "@/app/lib/seed-data";
+import { type ManagedBookState as BookState, type PaymentColumn, type PaymentColumnId } from "@/app/lib/semester";
 import { classList, normalize, PaymentSelect, SituationBadge, StatusLegend } from "./shared";
 
 export function Notebook({ state, columns, selectedClass, onClassChange, onPayment, onSituation, onAddStudent, onImport }: {
