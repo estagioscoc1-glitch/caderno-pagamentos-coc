@@ -251,6 +251,15 @@ button.room-row:hover { background: #f8faff; }
 .form-grid .check-row { flex-direction:row; align-items:flex-start; gap:9px; padding:10px; border-radius:9px; background:#f4f7fc; }
 .form-grid .check-row>span { text-transform:none; letter-spacing:0; line-height:1.45; }
 @media(max-width:650px){.form-grid.two-cols{grid-template-columns:1fr}.student-actions{width:100%}.action-button{flex:1;justify-content:center}}
+.save-error-banner { margin:0; padding:11px 22px; border-bottom:1px solid #efb2b7; background:#fff0f1; color:#a92e37; font-size:11px; }
+.backup-message { padding:12px 15px; border:1px solid #b8d8ef; border-radius:10px; background:#eff8ff; color:#1768b6; font-size:11px; font-weight:750; }
+.backup-import { padding:17px; display:flex; align-items:center; justify-content:space-between; gap:18px; }
+.backup-import>div { display:flex; align-items:center; gap:12px; color:#245fda; }
+.backup-import>div span { display:flex; flex-direction:column; gap:3px; color:#26364e; }
+.backup-import small { color:#7b899c; }
+.backup-row { grid-template-columns:1.2fr 1fr 1fr .5fr; }
+.backup-row>span:first-child { display:flex; align-items:center; gap:7px; }
+@media(max-width:650px){.backup-import{align-items:flex-start;flex-direction:column}.backup-row{grid-template-columns:1fr}.backup-row.simple-header{display:none}}
 .empty-state { min-height: 190px; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #8492a5; }
 .empty-state svg { width: 28px; margin-bottom: 8px; }
 .empty-state strong { color: #526176; font-size: 13px; }
