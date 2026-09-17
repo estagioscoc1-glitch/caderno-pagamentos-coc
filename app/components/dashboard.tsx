@@ -3,34 +3,34 @@
 import { CheckCircle2, ChevronRight, Clock3, TrendingUp, UserMinus, Users } from "lucide-react";
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Progress } from "@/components/ui/progress";
-import { PAYMENT_COLUMNS, type BookState } from "@/app/lib/seed-data";
+import { type BookState, type PaymentColumn } from "@/app/lib/seed-data";
 import { classList, number } from "./shared";
 
 function StatCard({ label, value, detail, tone, icon }: { label: string; value: string | number; detail: string; tone: string; icon: React.ReactNode }) {
   return <article className={`stat-card ${tone}`}><div className="stat-top"><span>{label}</span><div className="stat-icon">{icon}</div></div><strong>{value}</strong><small>{detail}</small></article>;
 }
 
-export function Dashboard({ state, onOpenClass }: { state: BookState; onOpenClass: (name: string) => void }) {
+export function Dashboard({ state, columns, semesterLabel, onOpenClass }: { state: BookState; columns: PaymentColumn[]; semesterLabel: string; onOpenClass: (name: string) => void }) {
   const active = state.students.filter((student) => student.situation === "active");
   const withdrawn = state.students.length - active.length;
-  const totalExpected = active.length * PAYMENT_COLUMNS.length;
-  const paid = active.reduce((sum, student) => sum + PAYMENT_COLUMNS.filter((column) => student.payments[column.id] === "paid").length, 0);
+  const totalExpected = active.length * columns.length;
+  const paid = active.reduce((sum, student) => sum + columns.filter((column) => student.payments[column.id] === "paid").length, 0);
   const pending = totalExpected - paid;
   const rate = totalExpected ? Math.round((paid / totalExpected) * 100) : 0;
-  const monthData = PAYMENT_COLUMNS.map((column) => {
+  const monthData = columns.map((column) => {
     const count = active.filter((student) => student.payments[column.id] === "paid").length;
     return { name: column.shortLabel, Pagos: count, taxa: active.length ? Math.round((count / active.length) * 100) : 0 };
   });
   const classes = classList(state.students).map((className) => {
     const room = active.filter((student) => student.className === className);
-    const expected = room.length * PAYMENT_COLUMNS.length;
-    const confirmed = room.reduce((sum, student) => sum + PAYMENT_COLUMNS.filter((column) => student.payments[column.id] === "paid").length, 0);
+    const expected = room.length * columns.length;
+    const confirmed = room.reduce((sum, student) => sum + columns.filter((column) => student.payments[column.id] === "paid").length, 0);
     return { className, students: room.length, paid: confirmed, pending: expected - confirmed, rate: expected ? Math.round((confirmed / expected) * 100) : 0 };
   });
 
   return <div className="view-stack">
     <section className="hero-panel">
-      <div><span className="eyebrow hero-eyebrow">VISÃO GERAL · 2026/2</span><h1>Panorama dos pagamentos</h1><p>Acompanhe cada turma sem valores — somente confirmações, pendências e desistências.</p></div>
+      <div><span className="eyebrow hero-eyebrow">VISÃO GERAL · {semesterLabel}</span><h1>Panorama dos pagamentos</h1><p>Acompanhe cada turma sem valores — somente confirmações, pendências e desistências.</p></div>
       <div className="score-ring" style={{ "--score": `${rate * 3.6}deg` } as React.CSSProperties}><div><strong>{rate}%</strong><span>recebido</span></div></div>
     </section>
     <section className="stat-grid">
