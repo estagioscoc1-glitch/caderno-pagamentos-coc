@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getBookState, saveBookState, sessionIsValid } from "@/app/lib/server";
-import { PAYMENT_COLUMNS, type BookState } from "@/app/lib/seed-data";
+import { PAYMENT_COLUMNS } from "@/app/lib/seed-data";
+import { type ManagedBookState as BookState } from "@/app/lib/semester";
 
 function validState(value: unknown): value is BookState {
   if (!value || typeof value !== "object") return false;
