@@ -14,7 +14,8 @@ function validState(value: unknown): value is BookState {
     !Array.isArray(state.messageHistory) ||
     state.messageHistory.length > 50000
   ) return false;
-  const ids = new Set(PAYMENT_COLUMNS.map((column) => column.id));
+  if (state.semesters && (!Array.isArray(state.semesters) || state.semesters.length > 40)) return false;
+  const ids = new Set((state.semesters?.flatMap((semester) => semester.paymentColumns) ?? PAYMENT_COLUMNS).map((column) => column.id));
   return state.students.every((student) => {
     if (!student || typeof student !== "object") return false;
     const candidate = student as BookState["students"][number];
@@ -23,9 +24,10 @@ function validState(value: unknown): value is BookState {
       typeof candidate.registration === "string" &&
       typeof candidate.name === "string" &&
       typeof candidate.className === "string" &&
+      (!candidate.semesterId || typeof candidate.semesterId === "string") &&
       (candidate.situation === "active" || candidate.situation === "withdrawn") &&
       candidate.payments &&
-      [...ids].every((id) => candidate.payments[id] === "paid" || candidate.payments[id] === "pending")
+      Object.entries(candidate.payments).every(([id, status]) => ids.has(id) && (status === "paid" || status === "pending"))
     );
   });
 }
