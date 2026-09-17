@@ -1,16 +1,19 @@
 "use client";
 
-import { GraduationCap, Search } from "lucide-react";
+import { GraduationCap, Search, UserPlus, Upload } from "lucide-react";
 import { useState } from "react";
-import { PAYMENT_COLUMNS, type BookState, type PaymentColumnId, type PaymentStatus, type Student } from "@/app/lib/seed-data";
+import { type BookState, type PaymentColumn, type PaymentColumnId, type PaymentStatus, type Student } from "@/app/lib/seed-data";
 import { classList, normalize, PaymentSelect, SituationBadge, StatusLegend } from "./shared";
 
-export function Notebook({ state, selectedClass, onClassChange, onPayment, onSituation }: {
+export function Notebook({ state, columns, selectedClass, onClassChange, onPayment, onSituation, onAddStudent, onImport }: {
   state: BookState;
+  columns: PaymentColumn[];
   selectedClass: string;
   onClassChange: (value: string) => void;
   onPayment: (studentId: string, column: PaymentColumnId, status: PaymentStatus) => void;
   onSituation: (student: Student) => void;
+  onAddStudent: () => void;
+  onImport: () => void;
 }) {
   const [search, setSearch] = useState("");
   const [show, setShow] = useState<"all" | "active" | "withdrawn">("active");
@@ -22,11 +25,11 @@ export function Notebook({ state, selectedClass, onClassChange, onPayment, onSit
     return !query || normalize(`${student.name} ${student.registration} ${student.phone}`).includes(query);
   });
   const active = room.filter((student) => student.situation === "active");
-  const paid = active.reduce((sum, student) => sum + PAYMENT_COLUMNS.filter((column) => student.payments[column.id] === "paid").length, 0);
-  const total = active.length * PAYMENT_COLUMNS.length;
+  const paid = active.reduce((sum, student) => sum + columns.filter((column) => student.payments[column.id] === "paid").length, 0);
+  const total = active.length * columns.length;
 
   return <div className="view-stack">
-    <section className="page-title-row"><div><span className="eyebrow">CADERNO DIGITAL</span><h1>Controle por sala</h1><p>Altere cada item para Pago ou Pendente. O dashboard é atualizado automaticamente.</p></div><div className="room-summary"><span><strong>{active.length}</strong> ativos</span><span className="text-paid"><strong>{paid}</strong> pagos</span><span className="text-pending"><strong>{total - paid}</strong> pendentes</span></div></section>
+    <section className="page-title-row"><div><span className="eyebrow">CADERNO DIGITAL</span><h1>Controle por sala</h1><p>Inclua, importe ou mova alunos para inativos sem perder o histórico.</p></div><div className="student-actions"><button className="action-button secondary" onClick={onImport}><Upload size={16}/> Importar CSV</button><button className="action-button" onClick={onAddStudent}><UserPlus size={16}/> Novo aluno</button></div></section>
     <section className="panel controls-panel">
       <label><span>Turma</span><select value={selectedClass} onChange={(event) => onClassChange(event.target.value)}>{classes.map((name) => <option key={name}>{name}</option>)}</select></label>
       <label className="search-control"><span>Buscar aluno</span><div><Search size={17} /><input placeholder="Nome, matrícula ou telefone" value={search} onChange={(event) => setSearch(event.target.value)} /></div></label>
@@ -34,7 +37,7 @@ export function Notebook({ state, selectedClass, onClassChange, onPayment, onSit
     </section>
     <section className="panel notebook-panel">
       <div className="notebook-caption"><div><GraduationCap size={20} /><strong>{selectedClass}</strong><span>{visible.length} alunos exibidos</span></div><StatusLegend /></div>
-      <div className="notebook-scroll"><table className="notebook-table"><thead><tr><th className="sticky-col reg-col">Matrícula</th><th className="sticky-col name-col">Aluno</th><th>Telefone</th><th>Situação</th>{PAYMENT_COLUMNS.map((column) => <th key={column.id}>{column.shortLabel}</th>)}<th>Ação</th></tr></thead><tbody>{visible.map((student) => <tr key={student.id} className={student.situation === "withdrawn" ? "row-withdrawn" : ""}><td className="sticky-col reg-col mono">{student.registration}</td><td className="sticky-col name-col"><strong>{student.name}</strong></td><td className="phone-cell">{student.phone}</td><td><SituationBadge student={student} /></td>{PAYMENT_COLUMNS.map((column) => <td key={column.id}><PaymentSelect value={student.payments[column.id]} disabled={student.situation === "withdrawn"} onChange={(status) => onPayment(student.id, column.id, status)} /></td>)}<td><button className={student.situation === "withdrawn" ? "mini-action restore" : "mini-action withdraw"} onClick={() => onSituation(student)}>{student.situation === "withdrawn" ? "Reativar" : "Desistente"}</button></td></tr>)}</tbody></table>{!visible.length && <div className="empty-state"><Search /><strong>Nenhum aluno encontrado</strong><span>Revise a busca ou os filtros.</span></div>}</div>
+      <div className="notebook-scroll"><table className="notebook-table"><thead><tr><th className="sticky-col reg-col">Matrícula</th><th className="sticky-col name-col">Aluno</th><th>Telefone</th><th>Situação</th>{columns.map((column) => <th key={column.id}>{column.shortLabel}</th>)}<th>Ação</th></tr></thead><tbody>{visible.map((student) => <tr key={student.id} className={student.situation === "withdrawn" ? "row-withdrawn" : ""}><td className="sticky-col reg-col mono">{student.registration}</td><td className="sticky-col name-col"><strong>{student.name}</strong></td><td className="phone-cell">{student.phone}</td><td><SituationBadge student={student} /></td>{columns.map((column) => <td key={column.id}><PaymentSelect value={student.payments[column.id] ?? "pending"} disabled={student.situation === "withdrawn"} onChange={(status) => onPayment(student.id, column.id, status)} /></td>)}<td><button className={student.situation === "withdrawn" ? "mini-action restore" : "mini-action withdraw"} onClick={() => onSituation(student)}>{student.situation === "withdrawn" ? "Reativar" : "Mover para inativos"}</button></td></tr>)}</tbody></table>{!visible.length && <div className="empty-state"><Search /><strong>Nenhum aluno encontrado</strong><span>Revise a busca ou os filtros.</span></div>}</div>
     </section>
   </div>;
 }
