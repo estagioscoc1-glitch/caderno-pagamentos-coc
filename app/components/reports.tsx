@@ -2,7 +2,8 @@
 import { Printer, UserMinus } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { type BookState, type PaymentColumn, type Student } from "@/app/lib/seed-data";
+import { type Student } from "@/app/lib/seed-data";
+import { type ManagedBookState as BookState, type PaymentColumn } from "@/app/lib/semester";
 import { classList, Logo } from "./shared";
 type ReportStatus = "all" | "paid" | "pending" | "withdrawn";
 
