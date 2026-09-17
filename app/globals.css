@@ -237,6 +237,20 @@ button.room-row:hover { background: #f8faff; }
 .mini-action { min-height: 29px; padding: 0 9px; border: 1px solid; border-radius: 8px; background: white; font-size: 8px; font-weight: 750; white-space: nowrap; }
 .mini-action.withdraw { color: #c23e45; border-color: #f1bdc0; }
 .mini-action.restore { color: #1768b6; border-color: #b8d8ef; }
+.student-actions { display:flex; gap:10px; flex-wrap:wrap; }
+.action-button { height:40px; padding:0 14px; border:0; border-radius:10px; display:inline-flex; align-items:center; gap:7px; background:#245fda; color:white; font-size:11px; font-weight:800; box-shadow:0 7px 18px #245fda25; }
+.action-button.secondary { background:white; color:#245fda; border:1px solid #bfd0ec; box-shadow:none; }
+.sidebar-semester select { width:100%; height:35px; margin:5px 0; padding:0 8px; border:1px solid #ffffff24; border-radius:8px; color:white; background:#163561; font-weight:800; }
+.sidebar-semester button { margin-top:9px; min-height:31px; padding:0 9px; border:1px solid #ffffff2c; border-radius:8px; display:inline-flex; align-items:center; gap:5px; background:#ffffff12; color:white; font-size:9px; font-weight:800; }
+.form-grid { display:grid; gap:13px; padding:8px 0; }
+.form-grid.two-cols { grid-template-columns:1fr 1fr; }
+.form-grid label { display:flex; flex-direction:column; gap:6px; }
+.form-grid label>span { font-size:10px; font-weight:800; color:#66758a; text-transform:uppercase; letter-spacing:.06em; }
+.form-grid input:not([type=checkbox]) { width:100%; height:42px; padding:0 11px; border:1px solid #d6e0ed; border-radius:9px; outline:0; }
+.form-grid input:focus { border-color:#4b78e6; box-shadow:0 0 0 3px #4b78e616; }
+.form-grid .check-row { flex-direction:row; align-items:flex-start; gap:9px; padding:10px; border-radius:9px; background:#f4f7fc; }
+.form-grid .check-row>span { text-transform:none; letter-spacing:0; line-height:1.45; }
+@media(max-width:650px){.form-grid.two-cols{grid-template-columns:1fr}.student-actions{width:100%}.action-button{flex:1;justify-content:center}}
 .empty-state { min-height: 190px; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #8492a5; }
 .empty-state svg { width: 28px; margin-bottom: 8px; }
 .empty-state strong { color: #526176; font-size: 13px; }
