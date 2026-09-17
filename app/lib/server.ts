@@ -1,5 +1,6 @@
 import { env } from "cloudflare:workers";
-import { INITIAL_STATE, normalizeBookState, type BookState } from "./seed-data";
+import { INITIAL_STATE } from "./seed-data";
+import { normalizeBookState, type ManagedBookState as BookState } from "./semester";
 
 export const SESSION_COOKIE = "caderno_coc_session";
 const SESSION_HOURS = 12;
