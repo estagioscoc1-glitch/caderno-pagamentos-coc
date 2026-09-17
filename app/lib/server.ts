@@ -1,5 +1,5 @@
 import { env } from "cloudflare:workers";
-import { INITIAL_STATE, type BookState } from "./seed-data";
+import { INITIAL_STATE, normalizeBookState, type BookState } from "./seed-data";
 
 export const SESSION_COOKIE = "caderno_coc_session";
 const SESSION_HOURS = 12;
@@ -35,7 +35,7 @@ async function derivePassword(password: string, salt: Uint8Array, iterations = P
     ["deriveBits"],
   );
   const bits = await crypto.subtle.deriveBits(
-    { name: "PBKDF2", hash: "SHA-256", salt, iterations },
+    { name: "PBKDF2", hash: "SHA-256", salt: salt.buffer as ArrayBuffer, iterations },
     key,
     256,
   );
@@ -189,12 +189,12 @@ export async function getBookState(): Promise<BookState> {
   const row = await db
     .prepare("SELECT state_json AS stateJson FROM payment_book_state WHERE id = 1")
     .first<{ stateJson: string }>();
-  if (row) return JSON.parse(row.stateJson) as BookState;
+  if (row) return normalizeBookState(JSON.parse(row.stateJson) as BookState);
   await db
     .prepare("INSERT INTO payment_book_state (id, state_json, updated_at) VALUES (1, ?, ?)")
     .bind(JSON.stringify(INITIAL_STATE), INITIAL_STATE.updatedAt)
     .run();
-  return INITIAL_STATE;
+  return normalizeBookState(INITIAL_STATE);
 }
 
 export async function saveBookState(state: BookState): Promise<BookState> {
